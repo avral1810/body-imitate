@@ -1,33 +1,25 @@
+from imutils.video.FileVideoStream import *
+import numpy as np
 import cv2
-import mediapipe as mp
+import argparse
 import time
+import mediapipe as mp
+ap = argparse.ArgumentParser()
+ap.add_argument("-v", "--video", required=True, help="path to video file")
 
+args = vars(ap.parse_args())
 
+fvs = FileVideoStream(args["video"], multithread=False).start()
+fps = FPS()
+time.sleep(1)
 
-mpPose, mpDraw = mp.solutions.pose, mp.solutions.drawing_utils
-pose = mpPose.Pose()
-cap = cv2.VideoCapture('./test.m4v')
-
-ptime = ctime = newFPS = count = 0
-refreshRate = 10
-
-
-while 1:
-    _, img = cap.read()
-    imgRGB = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    results = pose.process(imgRGB)
-    if results.pose_landmarks:
-        mpDraw.draw_landmarks(img, results.pose_landmarks, mpPose.POSE_CONNECTIONS)
-    ctime = time.time()
-    newFPS += 1 / (ctime - ptime)
-    ptime = ctime
-    if count % refreshRate == 0:
-        fps = newFPS / refreshRate
-        count += 1
-        newFPS = 0
-    cv2.putText(img, str(int(fps)), (10, 70), cv2.FONT_ITALIC, 3, (255, 0, 255), 3)
-    count += 1
-    cv2.imshow('VideoStream', img)
-
+while fvs.more():
+    frame = fvs.read()
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    cv2.putText(frame, "Queue Size: {}".format(fvs.Q.qsize()),(10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+    newFPS = fps.fps()
+    cv2.putText(frame, f"FPS: {newFPS[1]}", (10, 130), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 0), 2)
+    cv2.imshow("Frame", frame)
     if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
+        exit()
+
